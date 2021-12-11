@@ -31,42 +31,43 @@ The epsilon rate is calculated in a similar way; rather than use the most common
 
 Use the binary numbers in your diagnostic report to calculate the gamma rate and epsilon rate, then multiply them together. What is the power consumption of the submarine? (Be sure to represent your answer in decimal, not binary.)
 #>
+function Get-GammaEpsilonRate {
+    $data = Get-Content ./input3.txt
 
-$data = Get-Content ./input3.txt
-
-$epsilonRate = ''
-$gammaRate = ''
-$dataLength = $data[0].Length
-$currentIndex = $dataLength
-$gammaRate = ''
-$zerocounter = 0
-$OneCounter = 0
-
-while ($currentIndex -gt 0) {
-    foreach ($row in $data) {
-        $value = $row.Substring(($currentIndex-1),1)
-        if ($value -eq '0') {
-            $zeroCounter++
-        }
-        if ($value -eq '1') {
-            $OneCounter++
-        }
-    }
-    if ($zeroCounter -gt $OneCounter) {
-        $gammaRate = '0' + $gammaRate
-        $epsilonRate = '1' + $epsilonRate
-    }
-    else {
-        $gammaRate = '1' + $gammaRate
-        $epsilonRate = '0' + $epsilonRate
-    }
-    $OneCounter = 0
+    $epsilonRate = ''
+    $gammaRate = ''
+    $dataLength = $data[0].Length
+    $currentIndex = $dataLength
+    $gammaRate = ''
     $zerocounter = 0
-    $currentIndex--
-}
+    $oneCounter = 0
 
-$result = [Convert]::ToInt32($gammaRate,2) * [Convert]::ToInt32($epsilonRate,2)
-$result
+    while ($currentIndex -gt 0) {
+        foreach ($row in $data) {
+            $value = $row.Substring(($currentIndex - 1), 1)
+            if ($value -eq '0') {
+                $zeroCounter++
+            }
+            if ($value -eq '1') {
+                $oneCounter++
+            }
+        }
+        if ($zeroCounter -gt $oneCounter) {
+            $gammaRate = '0' + $gammaRate
+            $epsilonRate = '1' + $epsilonRate
+        }
+        else {
+            $gammaRate = '1' + $gammaRate
+            $epsilonRate = '0' + $epsilonRate
+        }
+        $oneCounter = 0
+        $zerocounter = 0
+        $currentIndex--
+    }
+
+    $result = [Convert]::ToInt32($gammaRate, 2) * [Convert]::ToInt32($epsilonRate, 2)
+    return $result
+}
 
 <#--- Part Two ---
 Next, you should verify the life support rating, which can be determined by multiplying the oxygen generator rating by the CO2 scrubber rating.
@@ -81,6 +82,22 @@ The bit criteria depends on which type of rating value you want to find:
 To find oxygen generator rating, determine the most common value (0 or 1) in the current bit position, and keep only numbers with that bit in that position. If 0 and 1 are equally common, keep values with a 1 in the position being considered.
 To find CO2 scrubber rating, determine the least common value (0 or 1) in the current bit position, and keep only numbers with that bit in that position. If 0 and 1 are equally common, keep values with a 0 in the position being considered.
 For example, to determine the oxygen generator rating value using the same example diagnostic report from above:
+
+
+
+00100
+11110
+10110
+10111
+10101
+01111
+00111
+11100
+10000
+11001
+00010
+01010
+
 
 Start with all 12 numbers and consider only the first bit of each number. There are more 1 bits (7) than 0 bits (5), so keep only the 7 numbers with a 1 in the first position: 11110, 10110, 10111, 10101, 11100, 10000, and 11001.
 Then, consider the second bit of the 7 remaining numbers: there are more 0 bits (4) than 1 bits (3), so keep only the 4 numbers with a 0 in the second position: 10110, 10111, 10101, and 10000.
@@ -97,4 +114,61 @@ As there is only one number left, stop; the CO2 scrubber rating is 01010, or 10 
 Finally, to find the life support rating, multiply the oxygen generator rating (23) by the CO2 scrubber rating (10) to get 230.
 
 Use the binary numbers in your diagnostic report to calculate the oxygen generator rating and CO2 scrubber rating, then multiply them together. What is the life support rating of the submarine? (Be sure to represent your answer in decimal, not binary.)#>
+function Get-O2GeneratorRate {
 
+    $data = Get-Content ./input3.txt
+    $currentIndex = 0
+    
+    while ($currentIndex -lt $data[0].Length) {
+        $oneCounter = 0
+        $zeroCounter = 0
+        if ($data -isnot [array]) { break }
+        foreach ($row in $data) {
+            $value = $row.Substring($currentIndex, 1)
+            if ($value -eq '0') { $zeroCounter++ }
+            if ($value -eq '1') { $oneCounter++ }
+        }
+    
+        if ($oneCounter -ge $zeroCounter) {
+            $data = ($data | Where-Object { $_.Substring($currentIndex, 1) -eq '1' })
+        }
+        else {
+            $data = ($data | Where-Object { $_.SubString($currentIndex, 1) -eq '0' })
+        }
+        $currentIndex++
+    }
+    return [System.Convert]::ToInt32($data,2)
+}
+
+function Get-CO2ScrubberRate {
+    $data = Get-Content ./input3.txt
+    $currentIndex = 0
+    
+    while ($currentIndex -lt $data[0].Length) {
+        $oneCounter = 0
+        $zeroCounter = 0
+        if ($data -isnot [array]) { break }
+        foreach ($row in $data) {
+            $value = $row.Substring($currentIndex, 1)
+            if ($value -eq '0') { $zeroCounter++ }
+            if ($value -eq '1') { $oneCounter++ }
+        }
+    
+        if ($zeroCounter -le $oneCounter) {
+            $data = ($data | Where-Object { $_.Substring($currentIndex, 1) -eq '0' })
+        }
+        else {
+            $data = ($data | Where-Object { $_.SubString($currentIndex, 1) -eq '1' })
+        }
+        $currentIndex++
+    }
+    return [System.Convert]::ToInt32($data,2)
+    
+}
+
+$o2 = Get-O2GeneratorRate
+$co2 = Get-CO2ScrubberRate
+
+$lifeSupportRating = $o2 * $co2
+
+Write-Host "LifesupportRating: $($lifeSupportRating)" -ForegroundColor Green
