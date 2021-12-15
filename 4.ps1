@@ -55,6 +55,111 @@ The score of the winning board can now be calculated. Start by finding the sum o
 To guarantee victory against the giant squid, figure out which board will win first. What will your final score be if you choose that board?
 #>
 
+function Get-LastWinnerScore {
+    param (
+        $numberSequence,
+        $boards
+    )
+    $lastbingo = @{}
+    foreach ($number in $numberSequence) {
+        Set-PulledBingoNumber -number $number -boards $boards
+        foreach ($board in $boards) {
+            $rowMarks = 0
+            $colMarks = 0
+    
+            for ($i=0;$i-lt 5;$i++) {
+                foreach ($key in ($board.keys | Where-Object key -NotIn "Bingo")) {
+                    if ($board["$key"].marked -eq $true -and $board["$key"].row -eq $i) {
+                        $rowMarks++
+                    }
+                    if ($rowMarks -eq 5 -and $board.bingo -eq $false) {
+                        $winningNumber = $number
+                        $board.bingo = $true
+                        $winningBoard = $board["$key"].board
+                        $lastbingo = $board
+
+                    }
+    
+                    if ($board["$key"].marked -eq $true -and $board["$key"].column -eq $i) {
+                        $colMarks++
+                    }
+    
+                    if ($colMarks -eq 5 -and $board.bingo -eq $false) {
+                        $winningNumber = $number
+                        $board.bingo = $true
+                        $winningBoard = $board["$key"].board
+                        $lastbingo = $board
+                    }
+                }
+                $rowMarks = 0
+                $colMarks = 0
+            }
+        }
+    }
+    
+    $untaggedNumbers = ($lastbingo.Values | where marked -eq $false).Number
+    $sum = 0
+    $untaggedNumbers | ForEach-Object {$sum += [int] $_}
+    
+    [int]$winningNumber * $sum
+
+}
+function Get-FirstWinnerScore {
+    param (
+        $numberSequence,
+        $boards
+    )
+
+    foreach ($number in $numberSequence) {
+        if ($bingo) {
+            break
+        }
+        Set-PulledBingoNumber -number $number -boards $boards
+        foreach ($board in $boards) {
+            if ($bingo) {
+                break
+            }
+            $rowMarks = 0
+            $colMarks = 0
+    
+            for ($i=0;$i-lt 5;$i++) {
+                foreach ($key in $board.Keys) {
+                    if ($board["$key"].marked -eq $true -and $board["$key"].row -eq $i) {
+                        $rowMarks++
+                    }
+                    if ($rowMarks -eq 5) {
+                        $winningNumber = $number
+                        Write-Host "BINGO ! on Board $($board["$key"].board) in ROW $i " -ForegroundColor Green
+                        $bingo = $true
+                        $winningBoard = $board["$key"].board
+                        break
+                    }
+    
+                    if ($board["$key"].marked -eq $true -and $board["$key"].column -eq $i) {
+                        $colMarks++
+                    }
+    
+                    if ($colMarks -eq 5) {
+                        $winningNumber = $number
+                        Write-Host "BINGO ! on Board $($board["$key"].board) in Column $i " -ForegroundColor Green
+                        $bingo = $true
+                        $winningBoard = $board["$key"].board
+                        break
+                    }
+                }
+                $rowMarks = 0
+                $colMarks = 0
+            }
+        }
+    }
+    
+    $untaggedNumbers = ($boards["$winningBoard"].values | where marked -eq $false).Number
+    $sum = 0
+    $untaggedNumbers | ForEach-Object {$sum += [int] $_}
+    
+    [int]$winningNumber * $sum
+    
+}
 function dep_Originalfunction {
     $boards = @()
 
@@ -105,8 +210,7 @@ function Set-PulledBingoNumber {
     $boardcounter = 1
     foreach ($board in $boards) {
 
-        if ($board."$number" -ne $null) {
-            Write-Host "Found in Board: $boardcounter Number on Row: $($board."$number".row) - Column $($board."$number".column)"
+        if ($board."$number" -ne $null -and $board.bingo -eq $false) {
             $board."$number".marked = $true
         
         }
@@ -121,7 +225,7 @@ function Get-InputDataHashTable {
     $counter = 0
     $boards = @()
     for ($i = 0; $i -lt $data.Length;$i+=5) {
-        $board = @{}
+        $board = @{ Bingo = $false}
         for ($j=0;$j -lt 5;$j++) {
             $boardNumber = $data[$i].Split(" ")[$j]
             $numberHash = @{
@@ -196,56 +300,7 @@ $winningBoard = $null
 $winningNumber = 0
 
 
-foreach ($number in $numberSequence) {
-    if ($bingo) {
-        break
-    }
-    Write-Host "number is $number"
-    Set-PulledBingoNumber -number $number -boards $boards
-    foreach ($board in $boards) {
-        if ($bingo) {
-            break
-        }
-        $rowMarks = 0
-        $colMarks = 0
-
-        for ($i=0;$i-lt 5;$i++) {
-            foreach ($key in $board.Keys) {
-                if ($board["$key"].marked -eq $true -and $board["$key"].row -eq $i) {
-                    $rowMarks++
-                }
-                if ($rowMarks -eq 5) {
-                    $winningNumber = $number
-                    Write-Host "BINGO ! on Board $($board["$key"].board) in ROW $i " -ForegroundColor Green
-                    $bingo = $true
-                    $winningBoard = $board["$key"].board
-                    break
-                }
-
-                if ($board["$key"].marked -eq $true -and $board["$key"].column -eq $i) {
-                    $colMarks++
-                }
-
-                if ($colMarks -eq 5) {
-                    $winningNumber = $number
-                    Write-Host "BINGO ! on Board $($board["$key"].board) in Column $i " -ForegroundColor Green
-                    $bingo = $true
-                    $winningBoard = $board["$key"].board
-                    break
-                }
-            }
-            $rowMarks = 0
-            $colMarks = 0
-        }
-    }
-}
-
-$untaggedNumbers = ($boards["$winningBoard"].values | where marked -eq $false).Number
-$sum = 0
-$untaggedNumbers | ForEach-Object {$sum += [int] $_}
-
-$result = [int]$winningNumber * $sum
-
+Write-Host "First Winning Board unmarked Numbers multiplied with Winning Number is: $(Get-FirstWinnerScore -numberSequence $numberSequence -boards $boards)"
+Write-Host "Last Winning Board unmarked Numbers multiplied with last Winning Number is: $(Get-LastWinnerScore -numberSequence $numberSequence -boards $boards)"
 
 Write-Host "Script finished"
-Write-Host "Res is $result"
