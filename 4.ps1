@@ -55,24 +55,197 @@ The score of the winning board can now be calculated. Start by finding the sum o
 To guarantee victory against the giant squid, figure out which board will win first. What will your final score be if you choose that board?
 #>
 
-cd D:\Coding\Github\AdventofCode2021
-$data = Get-Content ./input4.txt
-$numberSequence = @()
+function dep_Originalfunction {
+    $boards = @()
 
-$boards = @()
-
-foreach ($row in $data) {
-    if ($row.Contains(",")) {
-        [int[]]$numberSequence = $row.Split(",")
+for ($i = 0; $i -lt $data.Length;$i+=5) {
+    $board = (New-Object 'string[,]' 5,5)
+    for ($j=0;$j -lt 5;$j++) {
+        $board[0,$j] = ($data[$i].Split(" "))[$j]
+        $board[1,$j] = ($data[$i+1].Split(" "))[$j]
+        $board[2,$j] = ($data[$i+2].Split(" "))[$j]
+        $board[3,$j] = ($data[$i+3].Split(" "))[$j]
+        $board[4,$j] = ($data[$i+4].Split(" "))[$j]
     }
+    $boards += ,$board
+    $board = $null
+}
 
-    if (!$row) {
-        Write-host "blank line - seperator"
-    }
+#generate marks structure
+$marks = @()
+foreach ($board in $boards) {
+    $markboard = New-Object 'bool[,]' 5,5
+    $marks += ,$markboard    
+}
 
-    else {
-        $currentArray = New-Object 'int[,]' 5,5 
-        $currentArrRow = $row.Split(" ")
 
+for ($i=0;$i -lt $boards.Length;$i++) {
+    if ((Get-ValuePosInBoard -Array ($boards[$i]) -lookupValue 76)) {
+        Write-Host "Found in Board $i at $(Get-ValuePosInBoard -Array ($boards[$i]) -lookupValue 76)"
     }
 }
+
+
+foreach ($number in $numberSequence) {
+    for ($i=0;$i -le $boards.Length;$i++) {
+        $foundIndex = Get-ValuePosInBoard -Array $board -lookupValue $number
+        if ($foundIndex) {
+            $marks[$i][$foundIndex] = $true
+        }
+    }
+}
+    
+}
+function Set-PulledBingoNumber {
+    param (
+        [string] $number,
+        [object[]] $boards
+    )
+    
+    $boardcounter = 1
+    foreach ($board in $boards) {
+
+        if ($board."$number" -ne $null) {
+            Write-Host "Found in Board: $boardcounter Number on Row: $($board."$number".row) - Column $($board."$number".column)"
+            $board."$number".marked = $true
+        
+        }
+        $boardcounter++
+    }
+}
+
+function Get-InputDataHashTable {
+    param (
+        [string[]] $data
+    )
+    $counter = 0
+    $boards = @()
+    for ($i = 0; $i -lt $data.Length;$i+=5) {
+        $board = @{}
+        for ($j=0;$j -lt 5;$j++) {
+            $boardNumber = $data[$i].Split(" ")[$j]
+            $numberHash = @{
+                Number = $boardNumber
+                Row = 0
+                Column = $j
+                Marked = $false
+                Board = $counter
+            }
+            $board.Add("$boardNumber",$numberHash)
+
+
+            $boardNumber = $data[$i+1].Split(" ")[$j]
+            $numberHash = @{
+                Number = $boardNumber
+                Row = 1
+                Column = $j
+                Marked = $false
+                Board = $counter
+            }
+            $board.Add("$boardNumber",$numberHash)
+
+            $boardNumber = $data[$i+2].Split(" ")[$j]
+            $numberHash = @{
+                Number = $boardNumber
+                Row = 2
+                Column = $j
+                Marked = $false
+                Board = $counter
+            }
+            $board.Add("$boardNumber",$numberHash)
+
+            $boardNumber = $data[$i+3].Split(" ")[$j]
+            $numberHash = @{
+                Number = $boardNumber
+                Row = 3
+                Column = $j
+                Marked = $false
+                Board = $counter
+            }
+            $board.Add("$boardNumber",$numberHash)
+
+
+            $boardNumber = $data[$i+4].Split(" ")[$j]
+            $numberHash = @{
+                Number = $boardNumber
+                Row = 4
+                Column = $j
+                Marked = $false
+                Board = $counter
+            }
+            $board.Add("$boardNumber",$numberHash)
+        }
+        $boards += $board
+        $board = $null
+        $counter++
+    }
+
+    $boards
+}
+
+
+cd D:\Coding\Github\AdventofCode2021
+$data = (Get-Content ./input4.txt | select -Skip 1 | Where-Object {$_ -ne ""}).Replace("  "," ")
+$data = $data.Trim()
+$boards = $null
+
+$numberSequence = (Get-Content ./input4.txt | select -First 1).Split(",")
+$boards = Get-InputDataHashTable -data $data
+$bingo = $false
+$winningBoard = $null
+$winningNumber = 0
+
+
+foreach ($number in $numberSequence) {
+    if ($bingo) {
+        break
+    }
+    Write-Host "number is $number"
+    Set-PulledBingoNumber -number $number -boards $boards
+    foreach ($board in $boards) {
+        if ($bingo) {
+            break
+        }
+        $rowMarks = 0
+        $colMarks = 0
+
+        for ($i=0;$i-lt 5;$i++) {
+            foreach ($key in $board.Keys) {
+                if ($board["$key"].marked -eq $true -and $board["$key"].row -eq $i) {
+                    $rowMarks++
+                }
+                if ($rowMarks -eq 5) {
+                    $winningNumber = $number
+                    Write-Host "BINGO ! on Board $($board["$key"].board) in ROW $i " -ForegroundColor Green
+                    $bingo = $true
+                    $winningBoard = $board["$key"].board
+                    break
+                }
+
+                if ($board["$key"].marked -eq $true -and $board["$key"].column -eq $i) {
+                    $colMarks++
+                }
+
+                if ($colMarks -eq 5) {
+                    $winningNumber = $number
+                    Write-Host "BINGO ! on Board $($board["$key"].board) in Column $i " -ForegroundColor Green
+                    $bingo = $true
+                    $winningBoard = $board["$key"].board
+                    break
+                }
+            }
+            $rowMarks = 0
+            $colMarks = 0
+        }
+    }
+}
+
+$untaggedNumbers = ($boards["$winningBoard"].values | where marked -eq $false).Number
+$sum = 0
+$untaggedNumbers | ForEach-Object {$sum += [int] $_}
+
+$result = [int]$winningNumber * $sum
+
+
+Write-Host "Script finished"
+Write-Host "Res is $result"
