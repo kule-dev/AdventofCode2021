@@ -44,10 +44,10 @@ function Get-CoordinatesFromDataRow {
         [string] $dataRow
     )
 
-    $x1 = $dataRow.Substring(0,$row.IndexOf(" ")).Split(",")[0]
-    $y1 = $dataRow.Substring(0,$row.IndexOf(" ")).Split(",")[1]
-    $x2= ($dataRow.Substring(($row.LastIndexOf(" ") + 1), ($row.Length - ($row.LastIndexOf(" ") +1 )))).Split(",")[0]
-    $y2 = ($dataRow.Substring(($row.LastIndexOf(" ") + 1), ($row.Length - ($row.LastIndexOf(" ") +1 )))).Split(",")[1]
+    $x1 = $dataRow.Substring(0,$dataRow.IndexOf(" ")).Split(",")[0]
+    $y1 = $dataRow.Substring(0,$dataRow.IndexOf(" ")).Split(",")[1]
+    $x2= ($dataRow.Substring(($dataRow.LastIndexOf(" ") + 1), ($dataRow.Length - ($dataRow.LastIndexOf(" ") +1 )))).Split(",")[0]
+    $y2 = ($dataRow.Substring(($dataRow.LastIndexOf(" ") + 1), ($dataRow.Length - ($dataRow.LastIndexOf(" ") +1 )))).Split(",")[1]
 
     return $x1,$x2,$y1,$y2
 
@@ -69,8 +69,44 @@ function Get-ValidRows {
     }
     $validRows
 }
+function Set-DataRowPointsSecondPart {
+    param (
+        [string]$x1,
+        [string]$x2,
+        [string]$y1,
+        [string]$y2
+    )
+    if ($x1 -eq $x2) {
+        $points = $y1..$y2
+        foreach ($point in $points) {
+            $map["$x1,$point"] += 1
+        }
+    }
 
-function Set-DataRowPoints {
+    elseif ($y1 -eq $y2) {
+        $points = $x1..$x2
+        foreach ($point in $points) {
+            $map["$point,$y1"] += 1
+        }
+    }
+
+    elseif ([Math]::Abs($x1 - $x2) -eq ([Math]::Abs($y1 -$y2))) {
+        $pointsX = $x1..$x2
+        $pointsY = $y1..$y2
+
+        $dif = $pointsY.Count
+
+        for ($i=0;$i -lt $dif;$i++) {
+            $map["$($pointsX[$i]),$($pointsY[$i])"] += 1
+        }
+    }
+    
+    else {
+        Write-Host "Invalid Entry: $x1,$x2 - $y1,$y2"
+    }
+}
+
+function Set-DataRowPointsFirstPart {
     param (
         [string]$x1,
         [string]$x2,
@@ -93,15 +129,24 @@ function Set-DataRowPoints {
 }
 
 cd D:\Coding\Github\AdventofCode2021
-$data = Get-Content ./Input5.txt
+$data = (Get-Content ./Input5.txt).Trim()
 $map = @{}
 
-#$map = (New-Object 'int[,]' 999,999)
+
 $validRows = Get-ValidRows -data $data
 
 foreach ($row in $validRows) {
     $x1,$x2,$y1,$y2 = Get-CoordinatesFromDataRow -dataRow $row
-    Set-DataRowPoints -x1 $x1 -x2 $x2 -y1 $y1 -y2 $y2
+    Set-DataRowPointsFirstPart -x1 $x1 -x2 $x2 -y1 $y1 -y2 $y2
+}
+
+$results = $map.GetEnumerator() | Where-Object { $_.Value -gt 1 }
+$results.Count
+$map.Clear()
+
+foreach ($entry in $data) {
+    $x1,$x2,$y1,$y2 = Get-CoordinatesFromDataRow -dataRow $entry
+    Set-DataRowPointsSecondPart -x1 $x1 -x2 $x2 -y1 $y1 -y2 $y2
 }
 
 $results = $map.GetEnumerator() | Where-Object { $_.Value -gt 1 }
